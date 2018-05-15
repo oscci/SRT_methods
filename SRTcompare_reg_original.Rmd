@@ -16,7 +16,7 @@ require(beanplot)
 require(rddtools)
 ```
 ## Background
-The usual way of looking for implicit learning in serial-reaction-time (SRT) task has been to compare performance when there is a repeated pattern in the stimuli (learning phase) with performance when the pattern is broken (random phase). Typically this has been done by comparing RT for the last block in a pattern phase with the first block in the random phase: if the pattern was learned, we should see 'rebound' when it is broken. This approach was adopted in a paper by Hsu and Bishop (2014), which used a 'Green Monster' task developed by Tomblin et al (2007). The child was presented with four squares in a line and had to press a key to correspond to the square in which a green monster appeared. After an initial random phase of 100 trials, there were 200 trials where the repeated sequence 2 4 1 3 4 2 1 4 3 1 was used, and then a further 100 random trials. (Note: this sequence was wrongly described in the published paper: this is correct. I plan to add item-specific analyses later).
+The usual way of looking for implicit learning in serial-reaction-time (SRT) task has been to compare performance when there is a repeated pattern in the stimuli (learning phase) with performance when the pattern is broken (random phase). Typically this has been done by comparing RT for the last block in a pattern phase with the first block in the random phase: if the pattern was learned, we should see 'rebound' when it is broken. This approach was adopted in a paper by Hsu and Bishop (2014), which used a 'Green Monster' task developed by Tomblin et al (2007). The child was presented with four squares in a line and had to press a key to correspond to the square in which a green monster appeared. After an initial random phase of 100 trials, there were 200 trials where the repeated sequence 2 4 1 3 4 2 1 4 3 1 was used, and then a further 100 random trials. (Note: this sequence was wrongly described in the published paper: this is the correct sequence).
 
 In a later paper, Kuppuraj et al (2018) used a task designed to overcome some issues with previous research. In particular, a square array of four pictures was used and the task was to select the named picture. Using this method, it was possible to interleave different types of sequential dependency to compare learning for short sequences that varied in the statistical structure of dependencies. We also adopted a new analytic approach that used all of the data, regression discontinuity. This uses a test for the difference in slope between a pattern phase and a random phase. Although regression discontinuity is usually applied to group data, the method of comparing two slopes can be used for data from a single case, and it gives a t-value for each participant and condition that can be evaluated to determine whether learning occurred (i.e. whether the difference in the two slopes is statistically reliable). 
 
@@ -33,13 +33,14 @@ The definitive version of the dataset for Hsu and Bishop (2014), alldata_GM.xlsx
 filename <- 'Alldata_GM.csv'
 all_dat <- data.frame(read.csv(filename,stringsAsFactors = FALSE))
 rt_dat<-all_dat[401:800,1:97]
+stim_dat<-all_dat[1:400,1:97]
 #stargazer(rt_dat,type='text') #check appearance of data - 
 #comment this out to see stats for individual subjects
 ```
 
 
 
-```{r reformat, echo=FALSE}
+```{r getmeds, echo=FALSE}
 ## Reformat to get medians
 #Reformat file to get out medians for blocks of 20 trials.
 #Should replicate Figure 2 in Hsu and Bishop.
@@ -51,7 +52,11 @@ colnames(med.dat) <- c('ID','group','R1','R2','R3','R4','R5',
                         'R1a','R2a','R3a','R4a','R5a','errorrate')
 med.dat$ID <- mysubs
 med.dat$group <- substr(mysubs,1,1) #peel off first character
-
+med.dat$groupnum<-1 #to avoid nightmare of trying to turn factor level to number later on
+w<-which(med.dat$group=='L')
+med.dat$groupnum[w]<-2
+w<-which(med.dat$group=='S')
+med.dat$groupnum[w]<-3
 
 for (j in 1:length(mysubs)){ 
   readcol <- which(colnames(rt_dat)==mysubs[j])
@@ -73,6 +78,7 @@ for (i in 1:length(mysubs)){
 #recode group for those with >19% errors, so not included later
 w <- which(med.dat$errorrate>.19)
 med.dat$group[w] <- 'X' 
+med.dat$groupnum[w]<-4
 med.dat$group <-as.factor(med.dat$group)
 ```
 
@@ -251,6 +257,146 @@ With the original method, for the DLD vs age-matched controls, Cohen's d is `r t
 
 With the regression discontinuity method, for the DLD vs age-matched controls, Cohen's d is `r teff3`, and for age-matched controls vs language-matched controls it is `r teff4`. 
 
+## Conclusion
+The regression discontinuity approach appears more sensitive to detecting the rebound effect in a serial RT task than the traditional approach of subtracting the RT from the final block of the pattern phase from the first block of the subsequent random phase.
+
+## Additional analysis of item-specific effects
+The sequence used in the Green Monster task was 10 items long, raising concerns that the individual responses were not of equal frequency. In the sequence 2 4 1 3 4 2 1 4 3 1, numbers 2 and 3 occur twice, whereas 1 and 4 occur thrice. We were interested in the possibility that this difference in frequency of occurrence might influence the RTs. In fact, when the responses were subdivided into two subgroups, corresponding to stimuli 2 and 3 vs stimuli 1 and 4, it was apparent from observation that responses to the latter stimuli were indeed more rapid. However, this difference was clearly present in the first random block, when all stimuli were equally frequent. This suggests that the effect is not due to stimulus frequency, but rather to perceptual crowding: the four stimuli were arranged in a linear row, with 1 and 4 at the ends. They would therefore be more discriminable than stimuli 2 and 3, which had another box on either side.
+
+```{r reformat, echo=FALSE}
+mysubs <- colnames(rt_dat[2:97])
+med.dat2 <- data.frame(matrix(NA,nrow=length(mysubs),ncol=43))
+colnames(med.dat2) <- c('ID','group','R1.1','R2.1','R3.1','R4.1','R5.1',
+                        'P1.1','P2.1','P3.1','P4.1','P5.1',
+                        'P6.1','P7.1','P8.1','P9.1','P10.1',
+                        'R1a.1','R2a.1','R3a.1','R4a.1','R5a.1',
+                       'R1.2','R2.2','R3.2','R4.2','R5.2',
+                        'P1.2','P2.2','P3.2','P4.2','P5.2',
+                        'P6.2','P7.2','P8.2','P9.2','P10.2',
+                        'R1a.2','R2a.2','R3a.2','R4a.2','R5a.2','errorrate')
+med.dat2$ID <- mysubs
+med.dat2$group <- substr(mysubs,1,1) #peel off first character
+
+
+for (j in 1:length(mysubs)){ 
+  readcol <- which(colnames(rt_dat)==mysubs[j])
+  writecol <- 2 #first col will be 3
+       for (k in 1:2){
+         thisk <- c(2,3)
+         if(k>1) {thisk <- c(1,4)}
+for (i in 1:20){
+  b1 <- 1+(i-1)*20
+  b2 <- (i*20)
+    thisseq <- stim_dat[b1:b2,readcol]
+     thisrt <- rt_dat[b1:b2,readcol]
+
+       w <- which(thisseq%in%thisk)
+       writecol<-writecol+1
+  med.dat2[j,writecol] <- median(as.integer(thisrt[w]),na.rm=TRUE)
+ }
+}
+}
+```
+
+```{r makemeans, echo=FALSE}
+meantable <- rbind(colMeans(med.dat2[range1,3:22],na.rm=TRUE),
+                   colMeans(med.dat2[range1,23:42],na.rm=TRUE),
+                   colMeans(med.dat2[range2,3:22],na.rm=TRUE),
+                   colMeans(med.dat2[range2,23:42],na.rm=TRUE),
+                   colMeans(med.dat2[range3,3:22],na.rm=TRUE),
+                   colMeans(med.dat2[range3,23:42],na.rm=TRUE))
+```
+
+```{r plotsubsets,echo=FALSE}
+# get the range for y axis
+yrange <- c(200,1600)
+xrange <- c(1,20)
+
+# set up the plot
+plot(xrange, yrange, type="n", xlab="block",
+   ylab="RT" )
+colors <- rainbow(3)
+linetype <- c(1:3)
+plotchar <- c(1,3)
+
+# add lines
+jrange=matrix(c(1,5,6,15,16,20),byrow=TRUE, nrow=3)
+thisrow <- 0
+
+for (i in 1:3) { #3 groups
+  for (k in 1:2){ #2 stimulus types (1/4 or 2/3)
+  thisrow <- thisrow+1
+  for (j in 1:3){ #ranges for 3 types of trial
+    thisrange <-jrange[j,1]:jrange[j,2]
+  mygroup <- meantable[thisrow,thisrange]
+  lines(thisrange,mygroup, type="b", lwd=1.5,
+    lty=linetype[i], col=colors[i], pch=plotchar[k])
+}
+}
+}
+# add a title and subtitle
+title("SRT task")
+
+# add a legend
+legend(3, 600, c('Age-match','Language match','SLI'), cex=0.8, col=colors,
+   pch=plotchar, lty=linetype, title="Group")
+text(2,1400,'Random')
+text(7,1400,'Pattern')
+text(17,1400,'Random')
+text(15,400,'Crosses are stimuli 1/4;\n circles are 2/3')
+
+```
+
+This provides an opportunity to look at the regression discontinuity t-value separately for each subset. This will be based on half as much data so will be noisier, but could give an indication of split half reliability of the method.
+
+The first table shows agreement in terms of categorical classification in relation to p < .05: this is not very good. 
+
+```{r splithalf,echo=FALSE}
+med.dat2$reg_t1 <-NA #initialise columns to hold results
+med.dat2$reg_t2 <-NA
+med.dat2$reg_p1 <-NA #initialise columns to hold results
+med.dat2$reg_p2 <-NA
+med.dat2$psig1 <-0
+med.dat2$psig2 <-0
+thiscol<-which(names(med.dat2)=='reg_t1') #find first col to write to
+ for (j in 1:2){ #do both patterns one after the other
+for (i in 1:nsubs){
+ 
+  myrange<-8:22 #cols with Pattern and Rand2 trials
+  mycut=18 #start col for pattern
+  if (j==2){
+    myrange=28:42
+    mycut=38
+  }
+  rdd.temp<-rdd_data(y=as.numeric(med.dat2[i,myrange]),x=myrange,cutpoint=mycut)   # using the RDDtools package
+
+  reg_para <- rdd_reg_lm(rdd_object = rdd.temp, order = 1) #this is just linear: for higher order can increase
+  st<-summary(reg_para)[[4]]
+  myt<-st[2,3]#t-value corresponding to difference in slope for two phases
+  myp<-summary(reg_para)$coefficients[2,4]#sig of slope diff for the two phases
+  colmat<-matrix(c(44, 45,46,47,48,49),nrow=2)
+ med.dat2[i,colmat[j,1]]<-myt
+ med.dat2[i,colmat[j,2]]<-myp
+ if(myp<.05){med.dat2[i,colmat[j,3]]<-1}
+}
+ }
+rbit<-cor(med.dat2$reg_t1,med.dat2$reg_t2)
+
+agreetab<-table(med.dat2$psig1,med.dat2$psig2)
+
+colnames(agreetab)<-c('nolearn','learn')
+rownames(agreetab)<-c('nolearn','learn')
+agreetab
+```
+
+The correlation between the t-values for the two item sets is moderate, r = `r round(rbit,3)`.
+
+```{r plotsplithalf,echo=FALSE}
+plot(med.dat2$reg_t1,med.dat2$reg_t2,xlab='t-value for 2 & 3',ylab='t-value  for 1 & 4',col=med.dat$groupnum,main='Regression discontinuity t-values for 2 item subsets')
+legend(1.8,-1.5, legend=levels(med.dat$group),pch=1,
+       col=1:4,  cex=0.8)
+text(-4,2,paste0('r = ',round(rbit,3)))
+```
 
 ## References
 Bishop, D. V. M., Snowling, M. J., Thompson, P. A., Greenhalgh, T., & CATALISE Consortium. (2017). Phase 2 of CATALISE: a multinational and multidisciplinary Delphi consensus study of problems with language development: Terminology. Journal of Child Psychology and Psychiatry, 58(10), 1068-1080. doi:10.1111/jcpp.12721
