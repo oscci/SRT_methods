@@ -1,0 +1,259 @@
+---
+title: "Reanalysing Hsu & Bishop"
+author: "DVM Bishop"
+date: "15/05/2018"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+require(plyr)
+require(tidyverse)
+require(stargazer)
+require(beanplot)
+require(rddtools)
+```
+## Background
+The usual way of looking for implicit learning in serial-reaction-time (SRT) task has been to compare performance when there is a repeated pattern in the stimuli (learning phase) with performance when the pattern is broken (random phase). Typically this has been done by comparing RT for the last block in a pattern phase with the first block in the random phase: if the pattern was learned, we should see 'rebound' when it is broken. This approach was adopted in a paper by Hsu and Bishop (2014), which used a 'Green Monster' task developed by Tomblin et al (2007). The child was presented with four squares in a line and had to press a key to correspond to the square in which a green monster appeared. After an initial random phase of 100 trials, there were 200 trials where the repeated sequence 2 4 1 3 4 2 1 4 3 1 was used, and then a further 100 random trials. (Note: this sequence was wrongly described in the published paper: this is correct. I plan to add item-specific analyses later).
+
+In a later paper, Kuppuraj et al (2018) used a task designed to overcome some issues with previous research. In particular, a square array of four pictures was used and the task was to select the named picture. Using this method, it was possible to interleave different types of sequential dependency to compare learning for short sequences that varied in the statistical structure of dependencies. We also adopted a new analytic approach that used all of the data, regression discontinuity. This uses a test for the difference in slope between a pattern phase and a random phase. Although regression discontinuity is usually applied to group data, the method of comparing two slopes can be used for data from a single case, and it gives a t-value for each participant and condition that can be evaluated to determine whether learning occurred (i.e. whether the difference in the two slopes is statistically reliable). 
+
+In this paper, the main goal is apply the regression discontinuity approach to the original Hsu and Bishop dataset, to compare whether its sensitivity relative to the original method of measuring implicit learning.
+
+The definitive version of the dataset for Hsu and Bishop (2014), alldata_GM.xlsx, is available on Open Science Framework here: https://osf.io/396ai/wiki/home/. A csv version with just the worksheet showing responses and RTs is saved here.
+
+
+
+```{r readdata, echo=FALSE}
+## Read SRT data
+#  worksheet has response number in initial block, and then RTs below, with subjects in columns. NaN used for RT for inaccurate responses.
+
+filename <- 'Alldata_GM.csv'
+all_dat <- data.frame(read.csv(filename,stringsAsFactors = FALSE))
+rt_dat<-all_dat[401:800,1:97]
+#stargazer(rt_dat,type='text') #check appearance of data - 
+#comment this out to see stats for individual subjects
+```
+
+
+
+```{r reformat, echo=FALSE}
+## Reformat to get medians
+#Reformat file to get out medians for blocks of 20 trials.
+#Should replicate Figure 2 in Hsu and Bishop.
+mysubs <- colnames(rt_dat[2:97])
+med.dat <- data.frame(matrix(NA,nrow=length(mysubs),ncol=23))
+colnames(med.dat) <- c('ID','group','R1','R2','R3','R4','R5',
+                        'P1','P2','P3','P4','P5',
+                        'P6','P7','P8','P9','P10',
+                        'R1a','R2a','R3a','R4a','R5a','errorrate')
+med.dat$ID <- mysubs
+med.dat$group <- substr(mysubs,1,1) #peel off first character
+
+
+for (j in 1:length(mysubs)){ 
+  readcol <- which(colnames(rt_dat)==mysubs[j])
+for (i in 1:20){
+  b1 <- 1+(i-1)*20
+  b2 <- (i*20)
+  med.dat[j,i+2] <- median(as.integer(rt_dat[b1:b2,readcol]),na.rm=TRUE)
+ }
+}
+```
+```{r missing, echo=FALSE}
+## Get error rate
+#Identify any cases to exclude (overall accuracy < 80%).
+#NB. Dev Sci paper reports excluding 5 lang match and 2 SLI but I get 5 lang match and 1 SLI
+
+for (i in 1:length(mysubs)){
+  med.dat$errorrate[i] <- length(which(is.na(rt_dat[,(i+1)])))/400
+}
+#recode group for those with >19% errors, so not included later
+w <- which(med.dat$errorrate>.19)
+med.dat$group[w] <- 'X' 
+med.dat$group <-as.factor(med.dat$group)
+```
+
+## Data summary for three groups
+This plot shows the data processed as in the original Hsu and Bishop paper: i.e. medians for correct responses extracted for blocks of 20 trials.
+```{r getmeans, echo=FALSE}
+## Get means by group
+#And plot lines
+range1 <- which(med.dat$group=='C')
+range2 <- which(med.dat$group=='L')
+range3 <- which(med.dat$group=='S')
+
+
+meantable <- rbind(colMeans(med.dat[range1,3:22]),
+                   colMeans(med.dat[range2,3:22]),
+                   colMeans(med.dat[range3,3:22]))
+# get the range for y axis
+yrange <- c(200,1600)
+xrange <- c(1,20)
+
+# set up the plot
+plot(xrange, yrange, type="n", xlab="block",
+   ylab="RT" )
+colors <- rainbow(3)
+linetype <- c(1:3)
+plotchar <- seq(19,21,1)
+
+# add lines
+jrange=matrix(c(1,5,6,15,16,20),byrow=TRUE, nrow=3)
+for (i in 1:3) {
+  for (j in 1:3){
+    thisrange <-jrange[j,1]:jrange[j,2]
+  mygroup <- meantable[i,thisrange]
+  lines(thisrange,mygroup, type="b", lwd=1.5,
+    lty=linetype[i], col=colors[i], pch=plotchar[i])
+}
+}
+# add a title and subtitle
+title("SRT task: Medians by block of 20")
+
+# add a legend
+legend(3, 600, c('Age-match','Language match','SLI'), cex=0.8, col=colors,
+   pch=plotchar, lty=linetype, title="Group")
+text(2,1400,'Random')
+text(7,1400,'Pattern')
+text(17,1400,'Random')
+```
+```{r writefile, echo=FALSE}
+## Write med.dat to file for OSF - this step not now run
+#write.csv(med.dat,'GreenMonster_MedRT.csv')
+```
+
+## Original subtraction method
+We compute the difference between the last datapoint for the pattern blocks and the first datapoint for the random blocks, and compare this for the 3 groups. NB. We use the acronym DLD for 'developmental language disorder', which has superseded SLI (for 'specific language impairment') -see Bishop et al (2017).
+
+```{r subtract, echo=FALSE}
+levels(med.dat$group) = c('Age-control','Lang-control','DLD','Excluded')
+
+med.dat$diffc <- med.dat[,18]-med.dat[,17]
+beanplot(diffc ~ group, data = med.dat, col = "lightgray", border = "grey", 
+        ylab='Diff RT from last Pattern to first Random')
+```
+## Regression discontinuity approach
+We compare the original approach with the method of Kuppuraj and Bishop.
+The package rddtools (Stigler & Quast, 2015) is used to compare the slopes of two portions of data. We do this for the pattern and second random sequence. The t-value for this comparison can be used as an index of learning. This table shows the N children from each group who learned (p < .05).
+
+```{r regcoeff, echo=FALSE}
+## Regression discontinuity analysis for individual participants
+nsubs <- nrow(med.dat)
+med.dat$reg_t <-NA #initialise columns to hold results
+med.dat$reg_p <-NA
+for (i in 1:nsubs){
+  myrange<-8:22 #cols with Pattern and Rand2 trials
+  mycut=18 #start col for pattern
+  rdd.temp<-rdd_data(y=as.numeric(med.dat[i,myrange]),x=myrange,cutpoint=mycut)   # using the RDDtools package
+
+  reg_para <- rdd_reg_lm(rdd_object = rdd.temp, order = 1) #this is just linear: for higher order can increase
+  st<-summary(reg_para)[[4]]
+  myt<-st[2,3]#t-value corresponding to difference in slope for two phases
+  myp<-summary(reg_para)$coefficients[2,4]#sig of slope diff for the two phases
+ med.dat$reg_t[i]<-myt
+ med.dat$reg_p[i]<-myp
+}
+
+#divide according to whether reg_p is < .05
+med.dat$psig <- 0
+w<-which(med.dat$reg_p<.05)
+med.dat$psig[w]<-1
+learntab<-table(med.dat$group,med.dat$psig)
+colnames(learntab)<-c('Not learned','Learned')
+learntab
+```
+
+Now we look at the distribution of scores for t-values. This appears to give clearer differentiation between groups than the original analysis.
+
+
+
+```{r plottvalues, echo=FALSE}
+beanplot(reg_t ~ group, data = med.dat, col = "lightgray", border = "grey", 
+        ylab='Diff RT from last Pattern to first Random')
+mycor<-round(cor(med.dat$diffc,med.dat$reg_t),3) #correlation between difference and regression methods, rounded to 3 decimals
+
+```
+
+### Compare discontinuity regression results with subtraction results
+The relationship between the two measures is shown here.
+```{r correlmethods,echo=FALSE}
+
+plot(med.dat$diffc,med.dat$reg_t,xlab='Original RT difference',ylab='t-value from regression',col=med.dat$group)
+legend(-400, 4, legend=levels(med.dat$group),pch=1,
+       col=1:4,  cex=0.8)
+text(400,-2,paste0('r = ',mycor))
+```
+
+### Anova with diffc and with reg_t for 3 groups
+```{r anova, echo=FALSE}
+aov.dat <-  filter(med.dat, group !='Excluded')
+myaov <- aov(diffc~group,data=aov.dat)
+myaov2 <- aov(reg_t~group,data=aov.dat)
+print('Original analysis on difference score')
+summary(myaov)
+
+print('New analysis on t-value for regression discontinuity')
+summary(myaov2)
+```
+
+
+
+
+### Compute effect sizes (d) for different methods
+Pairwise comparisons with age-control for (i) DLD/age-con and (ii) lang-con/age-con
+```{r effsize, echo=FALSE}
+
+dtab<-ddply(aov.dat,~group,summarise,N=length(diffc),Mean.diff=mean(diffc),sd=sd(diffc))
+dtab
+sd1<-dtab[1,4]
+sd2<-dtab[2,4]
+sd3<-dtab[3,4]
+N1<-dtab[1,2]
+N2<-dtab[2,2]
+N3<-dtab[3,2]
+poolsd13<-sqrt(((N1-1)*sd1^2+(N3-1)*sd3^2)/(N1+N3-2))
+teff1 <- round((dtab[1,3]-dtab[3,3])/poolsd13,2)
+
+
+poolsd12<-sqrt(((N1-1)*sd1^2+(N2-1)*sd2^2)/(N1+N2-2))
+teff2 <- round((dtab[1,3]-dtab[2,3])/poolsd12,2)
+
+#Now repeat with t-values
+
+dtab<-ddply(aov.dat,~group,summarise,N=length(reg_t),Mean.t=mean(reg_t),sd=sd(reg_t))
+dtab
+sd1<-dtab[1,4]
+sd2<-dtab[2,4]
+sd3<-dtab[3,4]
+N1<-dtab[1,2]
+N2<-dtab[2,2]
+N3<-dtab[3,2]
+poolsd13<-sqrt(((N1-1)*sd1^2+(N3-1)*sd3^2)/(N1+N3-2))
+teff3 <- round((dtab[1,3]-dtab[3,3])/poolsd13,2)
+
+
+poolsd12<-sqrt(((N1-1)*sd1^2+(N2-1)*sd2^2)/(N1+N2-2))
+teff4 <- round((dtab[1,3]-dtab[2,3])/poolsd12,2)
+
+```
+
+The regression method yields larger effect sizes, as would be expected given the ANOVA results.
+With the original method, for the DLD vs age-matched controls, Cohen's d is `r teff1`, and for age-matched controls vs language-matched controls it is `r teff2`. 
+
+With the regression discontinuity method, for the DLD vs age-matched controls, Cohen's d is `r teff3`, and for age-matched controls vs language-matched controls it is `r teff4`. 
+
+
+## References
+Bishop, D. V. M., Snowling, M. J., Thompson, P. A., Greenhalgh, T., & CATALISE Consortium. (2017). Phase 2 of CATALISE: a multinational and multidisciplinary Delphi consensus study of problems with language development: Terminology. Journal of Child Psychology and Psychiatry, 58(10), 1068-1080. doi:10.1111/jcpp.12721
+
+Hsu, H. J., & Bishop, D. V. M. (2014). Sequence- specific procedural learning deficits in children with specific language impairment. Developmental Science, 17(3), 352-365. doi:10.1111/desc.12125.
+
+Kuppuraj, S., Duta, M., Thompson, P. A., & Bishop, D. V. M. (2018). Online incidental statistical learning of audiovisual word sequences in adults - a registered report Royal Society Open Science, 5(2), 171678. doi:10.1098/rsos.171678
+ 
+Stigler, M & Quast, B. (2015). rddtools: Toolbox for Regression Discontinuity Design ('RDD'). R package version 0.4.0. https://CRAN.R-project.org/package=rddtools
+
+Tomblin, J. B., Mainela-Arnold, E., & Zhang, X. (2007). Procedural learning in adolescents with and without specific language impairment. Language Learning and Development,, 3, 269-293. 
+
