@@ -3,8 +3,8 @@ title: "Reanalysing Hsu & Bishop"
 author: "DVM Bishop"
 date: "15/05/2018"
 output:
-  html_document: default
   pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE, echo=FALSE}
@@ -78,6 +78,7 @@ med.dat$group <-as.factor(med.dat$group)
 
 ## Data summary for three groups
 This plot shows the data processed as in the original Hsu and Bishop paper: i.e. medians for correct responses extracted for blocks of 20 trials.
+
 ```{r getmeans, echo=FALSE}
 ## Get means by group
 #And plot lines
@@ -120,6 +121,9 @@ text(2,1400,'Random')
 text(7,1400,'Pattern')
 text(17,1400,'Random')
 ```
+
+
+
 ```{r writefile, echo=FALSE}
 ## Write med.dat to file for OSF - this step not now run
 #write.csv(med.dat,'GreenMonster_MedRT.csv')
@@ -135,6 +139,7 @@ med.dat$diffc <- med.dat[,18]-med.dat[,17]
 beanplot(diffc ~ group, data = med.dat, col = "lightgray", border = "grey", 
         ylab='Diff RT from last Pattern to first Random')
 ```
+
 ## Regression discontinuity approach
 We compare the original approach with the method of Kuppuraj and Bishop.
 The package rddtools (Stigler & Quast, 2015) is used to compare the slopes of two portions of data. We do this for the pattern and second random sequence. The t-value for this comparison can be used as an index of learning. This table shows the N children from each group who learned (p < .05).
@@ -179,6 +184,7 @@ mycor<-round(cor(med.dat$diffc,med.dat$reg_t),3) #correlation between difference
 
 ### Compare discontinuity regression results with subtraction results
 The relationship between the two measures is shown here.
+
 ```{r correlmethods,echo=FALSE}
 
 plot(med.dat$diffc,med.dat$reg_t,xlab='Original RT difference',ylab='t-value from regression',col=med.dat$group)
