@@ -409,3 +409,8 @@ Stigler, M & Quast, B. (2015). rddtools: Toolbox for Regression Discontinuity De
 
 Tomblin, J. B., Mainela-Arnold, E., & Zhang, X. (2007). Procedural learning in adolescents with and without specific language impairment. Language Learning and Development,, 3, 269-293. 
 
+
+##Session information
+```{r sessinfo}
+sessionInfo()
+```
