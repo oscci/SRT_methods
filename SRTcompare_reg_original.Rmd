@@ -148,7 +148,7 @@ beanplot(diffc ~ group, data = med.dat, col = "lightgray", border = "grey",
 
 ## Regression discontinuity approach
 We compare the original approach with the method of Kuppuraj and Bishop.
-The package rddtools (Stigler & Quast, 2015) is used to compare the slopes of two portions of data. We do this for the pattern and second random sequence. The t-value for this comparison can be used as an index of learning. This table shows the N children from each group who learned (p < .05).
+The package rddtools (Stigler & Quast, 2015) is used to compare the slopes of two portions of data. We do this for the pattern and second random sequence. The t-value for this comparison can be used as an index of learning. This table shows the N children from each group who learned (p < .05, one-tailed - i.e. negative t-values ignored).
 
 ```{r regcoeff, echo=FALSE}
 ## Regression discontinuity analysis for individual participants
@@ -170,7 +170,7 @@ for (i in 1:nsubs){
 
 #divide according to whether reg_p is < .05
 med.dat$psig <- 0
-w<-which(med.dat$reg_p<.05)
+w<-unique(which(med.dat$reg_p<.1),which(med.dat$reg_t>0)) #onesided test - ignore neg t values, so use p < .1
 med.dat$psig[w]<-1
 learntab<-table(med.dat$group,med.dat$psig)
 colnames(learntab)<-c('Not learned','Learned')
@@ -377,7 +377,7 @@ for (i in 1:nsubs){
   colmat<-matrix(c(44, 45,46,47,48,49),nrow=2)
  med.dat2[i,colmat[j,1]]<-myt
  med.dat2[i,colmat[j,2]]<-myp
- if(myp<.05){med.dat2[i,colmat[j,3]]<-1}
+ if(myt>0 && myp<.1){med.dat2[i,colmat[j,3]]<-1}
 }
  }
 rbit<-cor(med.dat2$reg_t1,med.dat2$reg_t2)
