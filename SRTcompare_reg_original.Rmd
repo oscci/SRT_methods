@@ -20,7 +20,7 @@ The usual way of looking for implicit learning in serial-reaction-time (SRT) tas
 
 In a later paper, Kuppuraj et al (2018) used a task designed to overcome some issues with previous research. In particular, a square array of four pictures was used and the task was to select the named picture. Using this method, it was possible to interleave different types of sequential dependency to compare learning for short sequences that varied in the statistical structure of dependencies. We also adopted a new analytic approach that used all of the data, regression discontinuity. This uses a test for the difference in slope between a pattern phase and a random phase. Although regression discontinuity is usually applied to group data, the method of comparing two slopes can be used for data from a single case, and it gives a t-value for each participant and condition that can be evaluated to determine whether learning occurred (i.e. whether the difference in the two slopes is statistically reliable). 
 
-In this paper, the main goal is apply the regression discontinuity approach to the original Hsu and Bishop dataset, to compare whether its sensitivity relative to the original method of measuring implicit learning.
+In this paper, the main goal is apply the regression discontinuity approach to the original Hsu and Bishop dataset, to compare its sensitivity relative to the original method of measuring implicit learning.
 
 The definitive version of the dataset for Hsu and Bishop (2014), alldata_GM.xlsx, is available on Open Science Framework here: https://osf.io/396ai/wiki/home/. A csv version with just the worksheet showing responses and RTs is saved here.
 
